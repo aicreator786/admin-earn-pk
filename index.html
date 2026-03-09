@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EarnPK Admin Panel — Control Center</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+// Firebase SDKs safe loading
+window._fbReady = false;
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onload="checkFbLoad()" onerror="showFbError()"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" onload="checkFbLoad()" onerror="showFbError()"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onload="checkFbLoad()" onerror="showFbError()"></script>
+<script>
+var _fbCount = 0;
+function checkFbLoad() { _fbCount++; }
+function showFbError() {
+  var el = document.getElementById('auth-screen');
+  if(el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#ff6b6b;font-family:Inter,sans-serif;max-width:400px;margin:auto;">' +
+    '<div style="font-size:48px;margin-bottom:16px;">⚠️</div>' +
+    '<h2 style="margin-bottom:12px;">Internet Connection Nahi!</h2>' +
+    '<p style="color:#7a9bb5;line-height:1.7;">Firebase load nahi hua. Admin panel chalane ke liye internet zaruri hai.</p>' +
+    '<button onclick="location.reload()" style="margin-top:20px;padding:12px 28px;background:#00d4ff;color:#000;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;">🔄 Retry</button>' +
+    '</div>';
+}
+</script>
+<style>
+:root {
+  --bg:#07090f; --bg2:#0d1117; --bg3:#131920; --bg4:#1a2233;
+  --card:#0f1623; --card2:#162035;
+  --border:rgba(0,212,255,.1); --border2:rgba(0,212,255,.2);
+  --acc:#00d4ff; --acc2:#0099cc; --acc3:#004466;
+  --green:#00ff88; --green2:#00cc66;
+  --red:#ff3366; --red2:#cc0044;
+  --yellow:#ffcc00; --orange:#ff6600;
+  --purple:#a855f7;
+  --txt:#e8f4ff; --txt2:#7a9bb5; --txt3:#3d5a78;
+  --glow:0 0 30px rgba(0,212,255,.2);
+  --glow-green:0 0 30px rgba(0,255,136,.15);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden;}
+
+/* ---- BACKGROUND GRID ---- */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+
+/* ---- AUTH SCREEN ---- */
+#auth-screen{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+}
+.auth-wrap{width:420px;padding:20px;display:none;}
+.auth-brand{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--acc);margin-bottom:4px;letter-spacing:-1px;}
+.auth-brand span{color:var(--txt2);font-size:14px;font-weight:400;font-family:'Inter',sans-serif;display:block;margin-top:2px;letter-spacing:0;}
+.auth-card{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:32px;margin-top:28px;position:relative;overflow:hidden;}
+.auth-card::before{content:'';position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.08),transparent 60%);pointer-events:none;}
+.auth-title{font-size:20px;font-weight:700;color:var(--txt);margin-bottom:6px;}
+.auth-sub{font-size:13px;color:var(--txt2);margin-bottom:24px;}
+.form-group{margin-bottom:16px;}
+.form-lbl{font-size:11px;font-weight:600;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;display:block;}
+.form-inp{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--txt);font-family:'Inter',sans-serif;outline:none;transition:border .2s;}
+.form-inp:focus{border-color:var(--acc);}
+.pin-row{display:flex;gap:10px;}
+.pin-box{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;padding:14px 6px;font-size:22px;font-weight:700;text-align:center;color:var(--acc);font-family:'JetBrains Mono',monospace;outline:none;transition:border .2s;}
+.pin-box:focus{border-color:var(--acc);box-shadow:var(--glow);}
+.auth-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;border-radius:10px;font-size:15px;font-weight:700;color:#000;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;margin-top:6px;}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:var(--glow);}
+.auth-err{background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:12px;display:none;}
+.auth-err.show{display:block;}
+
+/* ---- LAYOUT ---- */
+#admin-app{display:none;min-height:100vh;position:relative;z-index:1;}
+#admin-app.show{display:flex;}
+
+/* SIDEBAR */
+.sidebar{
+  width:260px;min-height:100vh;background:var(--card);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;left:0;top:0;bottom:0;z-index:100;
+  transition:transform .3s;
+}
+.sb-brand{padding:24px 20px 20px;border-bottom:1px solid var(--border);}
+.sb-logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--acc);}
+.sb-logo span{color:var(--txt2);font-size:11px;font-weight:400;font-family:'Inter',sans-serif;display:block;margin-top:2px;}
+.sb-admin-badge{margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:50px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--green);}
+.sb-nav{flex:1;padding:16px 12px;overflow-y:auto;}
+.sb-section{font-size:10px;font-weight:700;color:var(--txt3);letter-spacing:2px;text-transform:uppercase;padding:12px 8px 6px;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;cursor:pointer;transition:all .2s;margin-bottom:2px;border:1px solid transparent;}
+.nav-item:hover{background:var(--bg4);border-color:var(--border);}
+.nav-item.active{background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,212,255,.05));border-color:rgba(0,212,255,.25);color:var(--acc);}
+.nav-ico{font-size:16px;width:22px;text-align:center;}
+.nav-lbl{font-size:13px;font-weight:600;flex:1;}
+.nav-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.sb-footer{padding:16px 20px;border-top:1px solid var(--border);}
+.sb-user{display:flex;align-items:center;gap:10px;}
+.sb-ava{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#000;}
+.sb-uname{font-size:13px;font-weight:600;color:var(--txt);}
+.sb-uemail{font-size:11px;color:var(--txt3);}
+.logout-btn{background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.2);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--red);cursor:pointer;font-family:'Inter',sans-serif;margin-top:10px;width:100%;transition:all .2s;}
+.logout-btn:hover{background:rgba(255,51,102,.2);}
+
+/* MAIN CONTENT */
+.main-content{margin-left:260px;flex:1;padding:0;min-height:100vh;}
+
+/* TOP BAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 30px;border-bottom:1px solid var(--border);
+  background:rgba(7,9,15,.9);backdrop-filter:blur(20px);
+  position:sticky;top:0;z-index:50;
+}
+.tb-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--txt);}
+.tb-title span{font-size:13px;font-weight:400;color:var(--txt2);font-family:'Inter',sans-serif;margin-left:10px;}
+.tb-right{display:flex;align-items:center;gap:12px;}
+.tb-time{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--txt2);background:var(--bg3);padding:6px 12px;border-radius:8px;border:1px solid var(--border);}
+.tb-status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:600;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* PAGE CONTAINER */
+.page{display:none;padding:28px 30px;}
+.page.active{display:block;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:all .2s;}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.stat-card::after{content:'';position:absolute;bottom:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.07;}
+.stat-card.blue::after{background:var(--acc);}
+.stat-card.green::after{background:var(--green);}
+.stat-card.red::after{background:var(--red);}
+.stat-card.yellow::after{background:var(--yellow);}
+.sc-label{font-size:11px;font-weight:600;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.sc-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;}
+.sc-value.blue{color:var(--acc);}
+.sc-value.green{color:var(--green);}
+.sc-value.red{color:var(--red);}
+.sc-value.yellow{color:var(--yellow);}
+.sc-change{font-size:11px;color:var(--txt3);margin-top:6px;}
+.sc-ico{font-size:22px;margin-bottom:8px;}
+
+/* SECTION HEADERS */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.sec-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--txt);}
+.sec-sub{font-size:12px;color:var(--txt2);margin-top:2px;}
+
+/* TABLE */
+.tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.tbl-top{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.tbl-search{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:9px 14px;font-size:13px;color:var(--txt);font-family:'Inter',sans-serif;outline:none;width:240px;transition:border .2s;}
+.tbl-search:focus{border-color:var(--acc);}
+table{width:100%;border-collapse:collapse;}
+th{padding:11px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:13px 16px;font-size:13px;color:var(--txt);border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(0,212,255,.025);}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-green{background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+.badge-red{background:rgba(255,51,102,.12);color:var(--red);border:1px solid rgba(255,51,102,.2);}
+.badge-yellow{background:rgba(255,204,0,.12);color:var(--yellow);border:1px solid rgba(255,204,0,.2);}
+.badge-blue{background:rgba(0,212,255,.12);color:var(--acc);border:1px solid rgba(0,212,255,.2);}
+.badge-purple{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.2);}
+.action-btn{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;color:var(--txt2);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;margin-right:4px;}
+.action-btn:hover{border-color:var(--acc);color:var(--acc);}
+.action-btn.danger:hover{border-color:var(--red);color:var(--red);}
+.action-btn.success:hover{border-color:var(--green);color:var(--green);}
+.tbl-empty{text-align:center;padding:40px;color:var(--txt3);font-size:13px;}
+.tbl-loading{text-align:center;padding:40px;color:var(--txt2);font-size:13px;}
+
+/* BUTTONS */
+.btn{padding:10px 18px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{transform:translateY(-1px);}
+.btn-primary{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#000;}
+.btn-success{background:linear-gradient(135deg,var(--green),var(--green2));color:#000;}
+.btn-danger{background:linear-gradient(135deg,var(--red),var(--red2));color:#fff;}
+.btn-ghost{background:var(--bg3);border:1px solid var(--border);color:var(--txt2);}
+.btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:7px;}
+.btn-icon{width:34px;height:34px;padding:0;justify-content:center;border-radius:8px;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:999;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:28px;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;transform:scale(.95);transition:transform .25s;}
+.modal-overlay.open .modal{transform:scale(1);}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--txt);}
+.modal-close{background:var(--bg3);border:1px solid var(--border);border-radius:7px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2);font-size:16px;transition:all .2s;}
+.modal-close:hover{border-color:var(--red);color:var(--red);}
+.modal-row{margin-bottom:14px;}
+.modal-lbl{font-size:11px;font-weight:600;color:var(--txt2);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;display:block;}
+.modal-inp{width:100%;background:var(--bg2);border:1.5px solid var(--border);border-radius:9px;padding:11px 14px;font-size:14px;color:var(--txt);font-family:'Inter',sans-serif;outline:none;transition:border .2s;}
+.modal-inp:focus{border-color:var(--acc);}
+.modal-inp[readonly]{opacity:.6;cursor:not-allowed;}
+.modal-ta{resize:vertical;min-height:80px;line-height:1.6;}
+.modal-sel{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a9bb5' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+
+/* TOAST */
+.toast{position:fixed;top:20px;right:20px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transform:translateX(20px);transition:all .3s;pointer-events:none;max-width:320px;}
+.toast.show{opacity:1;transform:translateX(0);}
+.toast.success{background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);color:var(--green);}
+.toast.error{background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.3);color:var(--red);}
+.toast.info{background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.3);color:var(--acc);}
+
+/* CARDS ROW */
+.cards-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;}
+.ic-title{font-size:13px;font-weight:700;color:var(--txt2);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+/* CHARTS PLACEHOLDER */
+.chart-placeholder{background:var(--bg2);border:1px dashed var(--border);border-radius:10px;height:140px;display:flex;align-items:center;justify-content:center;color:var(--txt3);font-size:12px;}
+.mini-bar-wrap{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:10px;}
+.mini-bar{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--acc),var(--acc2));min-height:2px;transition:height .8s ease;}
+.mini-bar-lbl{font-size:9px;color:var(--txt3);text-align:center;margin-top:4px;}
+
+/* TASK CARD */
+.task-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.task-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;transition:all .2s;position:relative;}
+.task-card:hover{border-color:var(--border2);}
+.task-card.disabled{opacity:.5;}
+.tc-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.tc-ico{font-size:22px;}
+.tc-toggle{position:relative;width:40px;height:22px;cursor:pointer;}
+.tc-toggle input{opacity:0;width:0;height:0;}
+.tc-slider{position:absolute;inset:0;background:var(--bg3);border-radius:11px;border:1px solid var(--border);transition:all .2s;}
+.tc-toggle input:checked + .tc-slider{background:var(--green2);border-color:var(--green);}
+.tc-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s;}
+.tc-toggle input:checked + .tc-slider::before{transform:translateX(18px);}
+.tc-name{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px;}
+.tc-reward{font-size:16px;font-weight:800;color:var(--green);font-family:'JetBrains Mono',monospace;}
+.tc-meta{font-size:11px;color:var(--txt3);margin-top:4px;}
+.tc-actions{display:flex;gap:6px;margin-top:10px;}
+
+/* SURVEY CARD */
+.survey-list{display:flex;flex-direction:column;gap:10px;}
+.survey-item{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:all .2s;}
+.survey-item:hover{border-color:var(--border2);}
+.si-ico{font-size:22px;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.si-info{flex:1;}
+.si-name{font-size:14px;font-weight:700;color:var(--txt);}
+.si-meta{font-size:11px;color:var(--txt2);margin-top:2px;}
+.si-reward{font-size:16px;font-weight:800;color:var(--green);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;gap:8px;justify-content:center;padding:16px 20px;border-top:1px solid var(--border);}
+.pg-btn{width:34px;height:34px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--txt2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.pg-btn:hover,.pg-btn.active{border-color:var(--acc);color:var(--acc);}
+.pg-info{font-size:12px;color:var(--txt3);}
+
+/* SETTINGS TABS */
+.stabs{display:flex;gap:4px;background:var(--bg2);border-radius:11px;padding:4px;margin-bottom:20px;}
+.stab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;color:var(--txt2);font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;text-align:center;}
+.stab.active{background:var(--card2);color:var(--acc);border:1px solid var(--border);}
+
+/* USER DETAIL */
+.user-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.ud-item{background:var(--bg2);border-radius:9px;padding:11px 14px;}
+.ud-lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.ud-val{font-size:14px;font-weight:600;color:var(--txt);}
+.ud-val.mono{font-family:'JetBrains Mono',monospace;color:var(--acc);}
+
+/* WITHDRAWAL DETAIL */
+.wd-detail{background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:14px;}
+.wd-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;}
+.wd-row:last-child{border-bottom:none;}
+.wd-key{color:var(--txt3);}
+.wd-val{color:var(--txt);font-weight:600;}
+
+/* RESP DESIGN */
+@media(max-width:1100px){.stats-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .main-content{margin-left:0;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .task-grid{grid-template-columns:1fr 1fr;}
+  .page{padding:16px;}
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* LOADER */
+.loader{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* REALTIME DOT */
+.live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--green);font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast-el"></div>
+
+<!-- ============================================ -->
+<!-- AUTH SCREEN -->
+<!-- ============================================ -->
+<div id="auth-screen">
+
+  <!-- Session checking loader -->
+  <div id="session-loader" style="
+    position:fixed;inset:0;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;">
+    <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--acc);">EarnPK</div>
+    <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;"></div>
+    <div style="font-size:13px;color:var(--txt2);">🔐 Session verify ho rahi hai...</div>
+  </div>
+
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      EarnPK Admin
+      <span>Control Panel — Restricted Access</span>
+    </div>
+
+    <!-- AUTH TABS -->
+    <div style="display:flex;gap:0;background:var(--bg2);border-radius:12px;padding:4px;margin-bottom:0;border:1px solid var(--border);margin-top:24px;">
+      <button id="tab-login-btn" onclick="switchAuthTab('login')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#000;">🔐 Login</button>
+      <button id="tab-signup-btn" onclick="switchAuthTab('signup')" style="flex:1;padding:10px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;background:transparent;color:var(--txt2);">📝 Sign Up</button>
+    </div>
+
+    <!-- LOGIN CARD -->
+    <div class="auth-card" id="auth-login-card">
+      <div class="auth-title">🔐 Admin Login</div>
+      <div class="auth-sub">Sirf authorized admin yahan login kar sakta hai</div>
+      <div class="auth-err" id="auth-err"></div>
+      <div class="form-group">
+        <label class="form-lbl">Email Address</label>
+        <input class="form-inp" id="a-email" type="email" placeholder="admin@earnpk.com" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Password</label>
+        <input class="form-inp" id="a-pass" type="password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="auth-btn" id="login-btn" onclick="adminLogin()">⚡ Admin Panel Kholein</button>
+      <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--txt3);">
+        Account nahi? <span style="color:var(--acc);cursor:pointer;font-weight:600;" onclick="switchAuthTab('signup')">Sign Up karein →</span>
+      </div>
+    </div>
+
+    <!-- SIGNUP CARD -->
+    <div class="auth-card" id="auth-signup-card" style="display:none;">
+      <div class="auth-title">📝 Admin Sign Up</div>
+      <div class="auth-sub">Pehli baar? Naya admin account banayein</div>
+      <div class="auth-err" id="signup-err"></div>
+      <div class="auth-err" id="signup-success" style="background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.3);color:var(--green);"></div>
+      <div class="form-group">
+        <label class="form-lbl">Full Name</label>
+        <input class="form-inp" id="s-name" type="text" placeholder="Aapka poora naam" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Email Address</label>
+        <input class="form-inp" id="s-email" type="email" placeholder="admin@earnpk.com" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Password</label>
+        <input class="form-inp" id="s-pass" type="password" placeholder="Kam az kam 6 characters" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">Password Confirm Karein</label>
+        <input class="form-inp" id="s-pass2" type="password" placeholder="Password dobara likhein" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-lbl">🔑 Admin Secret Key</label>
+        <input class="form-inp" id="s-secret" type="password" placeholder="Secret key daalen (EARNPK-ADMIN-2024)">
+        <div style="font-size:11px;color:var(--txt3);margin-top:5px;">⚠️ Sirf authorized log hi secret key jaante hain</div>
+      </div>
+      <button class="auth-btn" id="signup-btn" onclick="adminSignup()" style="background:linear-gradient(135deg,var(--green),var(--green2));color:#000;">🚀 Admin Account Banayein</button>
+      <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--txt3);">
+        Pehle se account hai? <span style="color:var(--acc);cursor:pointer;font-weight:600;" onclick="switchAuthTab('login')">Login karein →</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- ADMIN APP -->
+<!-- ============================================ -->
+<div id="admin-app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">EarnPK <span style="color:var(--acc);display:inline;">Admin</span>
+        <span>Full Control Panel v1.0</span>
+      </div>
+      <div class="sb-admin-badge">● LIVE SYSTEM</div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <div class="nav-ico">📊</div>
+        <div class="nav-lbl">Dashboard</div>
+      </div>
+      <div class="nav-item" onclick="showPage('analytics')">
+        <div class="nav-ico">📈</div>
+        <div class="nav-lbl">Analytics</div>
+      </div>
+
+      <div class="sb-section">Users</div>
+      <div class="nav-item" onclick="showPage('users')">
+        <div class="nav-ico">👥</div>
+        <div class="nav-lbl">All Users</div>
+      </div>
+      <div class="nav-item" onclick="showPage('withdrawals')">
+        <div class="nav-ico">💸</div>
+        <div class="nav-lbl">Withdrawals</div>
+        <div class="nav-badge" id="wd-pending-count">0</div>
+      </div>
+
+      <div class="sb-section">Content</div>
+      <div class="nav-item" onclick="showPage('tasks')">
+        <div class="nav-ico">⚡</div>
+        <div class="nav-lbl">Quick Tasks</div>
+      </div>
+      <div class="nav-item" onclick="showPage('surveys')">
+        <div class="nav-ico">📋</div>
+        <div class="nav-lbl">Surveys</div>
+      </div>
+      <div class="nav-item" onclick="showPage('announcements')">
+        <div class="nav-ico">📢</div>
+        <div class="nav-lbl">Announcements</div>
+      </div>
+
+      <div class="sb-section">System</div>
+      <div class="nav-item" onclick="showPage('settings')">
+        <div class="nav-ico">⚙️</div>
+        <div class="nav-lbl">App Settings</div>
+      </div>
+      <div class="nav-item" onclick="showPage('logs')">
+        <div class="nav-ico">📝</div>
+        <div class="nav-lbl">Activity Logs</div>
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-ava" id="sb-ava">A</div>
+        <div>
+          <div class="sb-uname" id="sb-uname">Admin</div>
+          <div class="sb-uemail" id="sb-uemail">Loading...</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="adminLogout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div>
+        <div class="tb-title" id="page-title">Dashboard <span id="page-sub">Overview</span></div>
+      </div>
+      <div class="tb-right">
+        <div class="live-badge">● Live</div>
+        <div class="tb-time" id="tb-clock">--:--:--</div>
+      </div>
+    </div>
+
+    <!-- ===== DASHBOARD PAGE ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card blue">
+          <div class="sc-ico">👥</div>
+          <div class="sc-label">Total Users</div>
+          <div class="sc-value blue" id="st-users">--</div>
+          <div class="sc-change" id="st-users-sub">Loading...</div>
+        </div>
+        <div class="stat-card green">
+          <div class="sc-ico">💰</div>
+          <div class="sc-label">Total Paid Out</div>
+          <div class="sc-value green" id="st-paid">$--</div>
+          <div class="sc-change" id="st-paid-sub">Loading...</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="sc-ico">⏳</div>
+          <div class="sc-label">Pending Withdrawals</div>
+          <div class="sc-value yellow" id="st-pending">--</div>
+          <div class="sc-change" id="st-pending-sub">Loading...</div>
+        </div>
+        <div class="stat-card red">
+          <div class="sc-ico">🚫</div>
+          <div class="sc-label">Banned Users</div>
+          <div class="sc-value red" id="st-banned">--</div>
+          <div class="sc-change">Total bans</div>
+        </div>
+      </div>
+
+      <div class="cards-row">
+        <div class="info-card">
+          <div class="ic-title">📋 Recent Withdrawals</div>
+          <div id="dash-wd-list"><div class="tbl-loading"><span class="loader"></span> Loading...</div></div>
+        </div>
+        <div class="info-card">
+          <div class="ic-title">👤 Naye Users (Last 10)</div>
+          <div id="dash-users-list"><div class="tbl-loading"><span class="loader"></span> Loading...</div></div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="ic-title">📈 Daily Earnings Chart (Last 7 Days)</div>
+        <div style="display:flex;gap:8px;" id="dash-chart"></div>
+        <div style="display:flex;gap:8px;margin-top:6px;" id="dash-chart-lbls"></div>
+      </div>
+    </div>
+
+    <!-- ===== ANALYTICS PAGE ===== -->
+    <div class="page" id="page-analytics">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="sc-ico">✅</div><div class="sc-label">Tasks Completed</div><div class="sc-value blue" id="an-tasks">--</div></div>
+        <div class="stat-card green"><div class="sc-ico">📋</div><div class="sc-label">Surveys Done</div><div class="sc-value green" id="an-surveys">--</div></div>
+        <div class="stat-card yellow"><div class="sc-ico">🔥</div><div class="sc-label">Avg Streak</div><div class="sc-value yellow" id="an-streak">--</div></div>
+        <div class="stat-card red"><div class="sc-ico">⭐</div><div class="sc-label">Total Points</div><div class="sc-value red" id="an-points">--</div></div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-top"><div class="sec-title">🏆 Top Earners Leaderboard</div></div>
+        <table>
+          <thead><tr><th>#</th><th>User</th><th>Email</th><th>Total Earned</th><th>Tasks</th><th>Streak</th><th>Action</th></tr></thead>
+          <tbody id="analytics-table"><tr><td colspan="7" class="tbl-loading"><span class="loader"></span> Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== USERS PAGE ===== -->
+    <div class="page" id="page-users">
+      <div class="tbl-wrap">
+        <div class="tbl-top">
+          <input class="tbl-search" id="user-search" placeholder="🔍 Name, email ya UID se search..." oninput="filterUsers()">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select class="modal-inp modal-sel" id="user-filter" onchange="filterUsers()" style="width:160px;padding:9px 32px 9px 12px;font-size:13px;margin:0;">
+              <option value="all">Sab Users</option>
+              <option value="active">Active</option>
+              <option value="banned">Banned</option>
+              <option value="rich">Balance > $1</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="loadUsers()">🔄 Refresh</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>User</th><th>Email</th><th>Balance</th><th>Earned</th><th>Tasks</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="users-table"><tr><td colspan="8" class="tbl-loading"><span class="loader"></span> Loading...</td></tr></tbody>
+        </table>
+        <div class="pagination" id="users-pagination"></div>
+      </div>
+    </div>
+
+    <!-- ===== WITHDRAWALS PAGE ===== -->
+    <div class="page" id="page-withdrawals">
+      <div class="tbl-wrap">
+        <div class="tbl-top">
+          <div class="sec-title">💸 Withdrawal Requests</div>
+          <div style="display:flex;gap:8px;">
+            <select class="modal-inp modal-sel" id="wd-filter" onchange="filterWithdrawals()" style="width:160px;padding:9px 32px 9px 12px;font-size:13px;margin:0;">
+              <option value="all">Sab</option>
+              <option value="pending">⏳ Pending</option>
+              <option value="approved">✅ Approved</option>
+              <option value="rejected">❌ Rejected</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="loadWithdrawals()">🔄 Refresh</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>User</th><th>Method</th><th>Amount</th><th>Account</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="wd-table"><tr><td colspan="7" class="tbl-loading"><span class="loader"></span> Loading...</td></tr></tbody>
+        </table>
+        <div class="pagination" id="wd-pagination"></div>
+      </div>
+    </div>
+
+    <!-- ===== TASKS PAGE ===== -->
+    <div class="page" id="page-tasks">
+      <div class="sec-hd">
+        <div><div class="sec-title">⚡ Quick Tasks Management</div><div class="sec-sub">Tasks enable/disable karein, rewards edit karein</div></div>
+        <button class="btn btn-primary" onclick="openAddTaskModal()">➕ Naya Task</button>
+      </div>
+      <div class="task-grid" id="tasks-grid"></div>
+    </div>
+
+    <!-- ===== SURVEYS PAGE ===== -->
+    <div class="page" id="page-surveys">
+      <div class="sec-hd">
+        <div><div class="sec-title">📋 Surveys Management</div><div class="sec-sub">Surveys add/edit/delete karein</div></div>
+        <button class="btn btn-primary" onclick="openAddSurveyModal()">➕ Naya Survey</button>
+      </div>
+      <div class="survey-list" id="surveys-list"></div>
+    </div>
+
+    <!-- ===== ANNOUNCEMENTS PAGE ===== -->
+    <div class="page" id="page-announcements">
+      <div class="cards-row">
+        <div class="info-card">
+          <div class="ic-title">📢 Naya Announcement</div>
+          <div class="modal-row">
+            <label class="modal-lbl">Title</label>
+            <input class="modal-inp" id="ann-title" placeholder="Announcement ka title...">
+          </div>
+          <div class="modal-row">
+            <label class="modal-lbl">Message</label>
+            <textarea class="modal-inp modal-ta" id="ann-msg" placeholder="Poori message yahan likhein..."></textarea>
+          </div>
+          <div class="modal-row">
+            <label class="modal-lbl">Type</label>
+            <select class="modal-inp modal-sel" id="ann-type">
+              <option value="info">ℹ️ Info</option>
+              <option value="success">✅ Success / Good News</option>
+              <option value="warning">⚠️ Warning</option>
+              <option value="maintenance">🔧 Maintenance</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="postAnnouncement()">📤 Post Karein</button>
+        </div>
+        <div class="info-card">
+          <div class="ic-title">📋 Posted Announcements</div>
+          <div id="ann-list"><div class="tbl-loading"><span class="loader"></span> Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SETTINGS PAGE ===== -->
+    <div class="page" id="page-settings">
+      <div class="stabs">
+        <button class="stab active" onclick="switchSettingsTab('general')">⚙️ General</button>
+        <button class="stab" onclick="switchSettingsTab('cashout')">💸 Cashout</button>
+        <button class="stab" onclick="switchSettingsTab('rewards')">💰 Rewards</button>
+        <button class="stab" onclick="switchSettingsTab('admin')">🔐 Admin</button>
+      </div>
+      <div id="settings-general">
+        <div class="info-card" style="margin-bottom:16px;">
+          <div class="ic-title">🌐 App Settings</div>
+          <div class="modal-row"><label class="modal-lbl">App Name</label><input class="modal-inp" id="set-appname" value="EarnPK"></div>
+          <div class="modal-row"><label class="modal-lbl">Support Email</label><input class="modal-inp" id="set-email" value="earnpk.help@gmail.com"></div>
+          <div class="modal-row"><label class="modal-lbl">App Version</label><input class="modal-inp" id="set-version" value="v10.0"></div>
+          <div class="modal-row"><label class="modal-lbl">Maintenance Mode</label>
+            <select class="modal-inp modal-sel" id="set-maintenance">
+              <option value="off">🟢 OFF — App chalti hai</option>
+              <option value="on">🔴 ON — App band hai</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings('general')">💾 Save</button>
+        </div>
+      </div>
+      <div id="settings-cashout" style="display:none;">
+        <div class="info-card">
+          <div class="ic-title">💸 Cashout Settings</div>
+          <div class="modal-row"><label class="modal-lbl">Minimum Cashout (USD)</label><input class="modal-inp" id="set-minco" type="number" step="0.01" value="0.50"></div>
+          <div class="modal-row"><label class="modal-lbl">Processing Time</label><input class="modal-inp" id="set-proctime" value="24-48 ghante"></div>
+          <div class="modal-row"><label class="modal-lbl">EasyPaisa (Enable)</label>
+            <select class="modal-inp modal-sel" id="set-ep"><option value="on">✅ ON</option><option value="off">❌ OFF</option></select>
+          </div>
+          <div class="modal-row"><label class="modal-lbl">JazzCash (Enable)</label>
+            <select class="modal-inp modal-sel" id="set-jc"><option value="on">✅ ON</option><option value="off">❌ OFF</option></select>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings('cashout')">💾 Save</button>
+        </div>
+      </div>
+      <div id="settings-rewards" style="display:none;">
+        <div class="info-card">
+          <div class="ic-title">💰 Reward Settings</div>
+          <div class="modal-row"><label class="modal-lbl">Referral Bonus (USD)</label><input class="modal-inp" id="set-ref" type="number" step="0.01" value="0.05"></div>
+          <div class="modal-row"><label class="modal-lbl">Daily Spin Max (USD)</label><input class="modal-inp" id="set-spinmax" type="number" step="0.01" value="0.10"></div>
+          <div class="modal-row"><label class="modal-lbl">Ad Watch Reward (USD)</label><input class="modal-inp" id="set-ad" type="number" step="0.01" value="0.01"></div>
+          <div class="modal-row"><label class="modal-lbl">Max Ads Per Day</label><input class="modal-inp" id="set-admax" type="number" value="5"></div>
+          <button class="btn btn-primary" onclick="saveSettings('rewards')">💾 Save</button>
+        </div>
+      </div>
+      <div id="settings-admin" style="display:none;">
+        <div class="info-card">
+          <div class="ic-title">🔐 Admin Access Management</div>
+          <div class="modal-row">
+            <label class="modal-lbl">Current Admin Email</label>
+            <input class="modal-inp" id="set-admemail" readonly>
+          </div>
+          <div class="modal-row">
+            <label class="modal-lbl">Admin Emails (jo log panel use kar saken) — ek per line</label>
+            <textarea class="modal-inp modal-ta" id="set-adminemails" placeholder="admin@earnpk.com&#10;owner@earnpk.com" style="min-height:100px;"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="saveAdminEmails()">💾 Admin List Save</button>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+            <div class="modal-lbl" style="margin-bottom:8px;">⚠️ Password Change</div>
+            <p style="font-size:12px;color:var(--txt2);margin-bottom:10px;">Firebase Console → Authentication → Users → apna email → Reset Password</p>
+            <button class="btn btn-ghost btn-sm" onclick="sendPasswordReset()">📧 Reset Email Bhejo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LOGS PAGE ===== -->
+    <div class="page" id="page-logs">
+      <div class="tbl-wrap">
+        <div class="tbl-top">
+          <div class="sec-title">📝 Activity Logs</div>
+          <button class="btn btn-ghost btn-sm" onclick="clearLogs()">🗑️ Logs Clear</button>
+        </div>
+        <table>
+          <thead><tr><th>Time</th><th>Action</th><th>User</th><th>Details</th></tr></thead>
+          <tbody id="logs-table"><tr><td colspan="4" class="tbl-loading"><span class="loader"></span> Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end main-content -->
+</div><!-- end admin-app -->
+
+<!-- ============================================ -->
+<!-- MODALS -->
+<!-- ============================================ -->
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="mu-title">User Detail</div>
+      <div class="modal-close" onclick="closeModal('modal-user')">✕</div>
+    </div>
+    <div id="modal-user-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Close</button>
+      <button class="btn btn-success btn-sm" id="mu-add-bal-btn" onclick="addBalanceModal()">💰 Balance Add</button>
+      <button class="btn btn-danger btn-sm" id="mu-ban-btn" onclick="toggleBanUser()">🚫 Ban</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Balance Modal -->
+<div class="modal-overlay" id="modal-add-bal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-hd">
+      <div class="modal-title">💰 Balance Add/Remove</div>
+      <div class="modal-close" onclick="closeModal('modal-add-bal')">✕</div>
+    </div>
+    <div class="modal-row">
+      <label class="modal-lbl">User</label>
+      <input class="modal-inp" id="ab-user" readonly>
+    </div>
+    <div class="modal-row">
+      <label class="modal-lbl">Amount (USD) — minus (-) ke liye -0.50 likhein</label>
+      <input class="modal-inp" id="ab-amount" type="number" step="0.01" placeholder="0.50">
+    </div>
+    <div class="modal-row">
+      <label class="modal-lbl">Reason / Note</label>
+      <input class="modal-inp" id="ab-reason" placeholder="Maslan: Manual bonus, correction...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-bal')">Cancel</button>
+      <button class="btn btn-success" onclick="applyBalanceChange()">✅ Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Withdrawal Action Modal -->
+<div class="modal-overlay" id="modal-wd">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-hd">
+      <div class="modal-title">💸 Withdrawal Review</div>
+      <div class="modal-close" onclick="closeModal('modal-wd')">✕</div>
+    </div>
+    <div id="modal-wd-body"></div>
+    <div class="modal-row">
+      <label class="modal-lbl">Admin Note (optional)</label>
+      <input class="modal-inp" id="wd-note" placeholder="Reason ya note...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-wd')">Close</button>
+      <button class="btn btn-danger btn-sm" id="wd-reject-btn" onclick="processWithdrawal('rejected')">❌ Reject</button>
+      <button class="btn btn-success btn-sm" id="wd-approve-btn" onclick="processWithdrawal('approved')">✅ Approve</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-overlay" id="modal-add-task">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="addtask-title">➕ Naya Task</div>
+      <div class="modal-close" onclick="closeModal('modal-add-task')">✕</div>
+    </div>
+    <div class="modal-row"><label class="modal-lbl">Task ID (unique)</label><input class="modal-inp" id="at-id" placeholder="t11"></div>
+    <div class="modal-row"><label class="modal-lbl">Emoji / Icon</label><input class="modal-inp" id="at-ico" placeholder="📱"></div>
+    <div class="modal-row"><label class="modal-lbl">Task Name</label><input class="modal-inp" id="at-name" placeholder="Maslan: App Review"></div>
+    <div class="modal-row"><label class="modal-lbl">Reward (USD)</label><input class="modal-inp" id="at-reward" type="number" step="0.01" value="0.01"></div>
+    <div class="modal-row"><label class="modal-lbl">Time Required</label><input class="modal-inp" id="at-time" placeholder="2 min"></div>
+    <div class="modal-row"><label class="modal-lbl">Badge (optional)</label><input class="modal-inp" id="at-badge" placeholder="HOT / NEW / 💎"></div>
+    <div class="modal-row"><label class="modal-lbl">Status</label>
+      <select class="modal-inp modal-sel" id="at-status"><option value="active">✅ Active</option><option value="disabled">❌ Disabled</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-task')">Cancel</button>
+      <button class="btn btn-primary" id="at-save-btn" onclick="saveTask()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Survey Modal -->
+<div class="modal-overlay" id="modal-add-survey">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="addsurv-title">📋 Naya Survey</div>
+      <div class="modal-close" onclick="closeModal('modal-add-survey')">✕</div>
+    </div>
+    <div class="modal-row"><label class="modal-lbl">Survey ID (unique)</label><input class="modal-inp" id="as-id" placeholder="sv6"></div>
+    <div class="modal-row"><label class="modal-lbl">Emoji / Icon</label><input class="modal-inp" id="as-ico" placeholder="🎓"></div>
+    <div class="modal-row"><label class="modal-lbl">Survey Name</label><input class="modal-inp" id="as-name" placeholder="Education Survey"></div>
+    <div class="modal-row"><label class="modal-lbl">Reward (USD)</label><input class="modal-inp" id="as-reward" type="number" step="0.01" value="0.05"></div>
+    <div class="modal-row"><label class="modal-lbl">Points</label><input class="modal-inp" id="as-pts" type="number" value="50"></div>
+    <div class="modal-row"><label class="modal-lbl">Time Required</label><input class="modal-inp" id="as-time" placeholder="5 min"></div>
+    <div class="modal-row"><label class="modal-lbl">Type</label>
+      <select class="modal-inp modal-sel" id="as-type"><option value="quick">Quick Survey</option><option value="long">Long Survey (+ Comment)</option></select>
+    </div>
+    <div class="modal-row"><label class="modal-lbl">Questions (JSON format)</label>
+      <textarea class="modal-inp modal-ta" id="as-qs" placeholder='[{"q":"Sawaal yahan?","opts":["Option A","Option B","Option C","Option D"]}]' style="min-height:120px;font-family:JetBrains Mono,monospace;font-size:12px;"></textarea>
+    </div>
+    <div class="modal-row"><label class="modal-lbl">Background Color</label><input class="modal-inp" id="as-bg" placeholder="rgba(0,230,118,.13)"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-survey')">Cancel</button>
+      <button class="btn btn-primary" id="as-save-btn" onclick="saveSurvey()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-hd">
+      <div class="modal-title" id="confirm-title">⚠️ Confirm</div>
+      <div class="modal-close" onclick="closeModal('modal-confirm')">✕</div>
+    </div>
+    <p id="confirm-msg" style="color:var(--txt2);font-size:14px;line-height:1.6;margin-bottom:20px;"></p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-confirm')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">✅ Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// FIREBASE SAFE INIT
+// ============================================
+const firebaseConfig = {
+  apiKey: "AIzaSyC8xlLbrTUhhlsn_EvcUUDQgHchBWb9v9U",
+  authDomain: "earn-pk-197ea.firebaseapp.com",
+  projectId: "earn-pk-197ea",
+  storageBucket: "earn-pk-197ea.firebasestorage.app",
+  messagingSenderId: "40385725195",
+  appId: "1:40385725195:web:b36d5af3dea0d3f719980e"
+};
+
+let auth, db;
+
+function waitForFirebaseAdmin(callback, tries) {
+  tries = tries || 0;
+  if(typeof firebase !== 'undefined' && firebase.auth && typeof firebase.firestore !== 'undefined') {
+    try {
+      // Admin panel ko alag named instance dete hain
+      // Taake user panel ki session mix na ho
+      var adminApp;
+      if(!firebase.apps.find(function(a){ return a.name === 'adminApp'; })) {
+        adminApp = firebase.initializeApp(firebaseConfig, 'adminApp');
+      } else {
+        adminApp = firebase.app('adminApp');
+      }
+      auth = adminApp.auth();
+      db   = adminApp.firestore();
+      callback();
+    } catch(e) { showFbError(); }
+  } else if(tries < 40) {
+    setTimeout(() => waitForFirebaseAdmin(callback, tries+1), 200);
+  } else {
+    showFbError();
+  }
+}
+
+// ============================================
+// AUTH TAB SWITCHER — GLOBAL (Firebase se pehle bhi kaam kare)
+// ============================================
+function switchAuthTab(tab) {
+  var loginCard  = document.getElementById('auth-login-card');
+  var signupCard = document.getElementById('auth-signup-card');
+  var loginBtn   = document.getElementById('tab-login-btn');
+  var signupBtn  = document.getElementById('tab-signup-btn');
+  if(!loginCard || !signupCard) return;
+  if(tab === 'login') {
+    loginCard.style.display  = 'block';
+    signupCard.style.display = 'none';
+    loginBtn.style.background  = 'linear-gradient(135deg,var(--acc),var(--acc2))';
+    loginBtn.style.color       = '#000';
+    signupBtn.style.background = 'transparent';
+    signupBtn.style.color      = '#7a9bb5';
+  } else {
+    loginCard.style.display  = 'none';
+    signupCard.style.display = 'block';
+    signupBtn.style.background = 'linear-gradient(135deg,#00ff88,#00cc66)';
+    signupBtn.style.color      = '#000';
+    loginBtn.style.background  = 'transparent';
+    loginBtn.style.color       = '#7a9bb5';
+  }
+}
+
+// ============================================
+// ADMIN SIGN UP — GLOBAL
+// ============================================
+var ADMIN_SECRET_KEY = 'EARNPK-ADMIN-2024';
+
+async function adminSignup() {
+  var errEl  = document.getElementById('signup-err');
+  var succEl = document.getElementById('signup-success');
+  var btn    = document.getElementById('signup-btn');
+
+  // Firebase ready check
+  if(typeof auth === 'undefined' || !auth) {
+    errEl.textContent = '❌ Firebase load nahi hua! Page refresh karein.';
+    errEl.classList.add('show'); return;
+  }
+
+  var name   = document.getElementById('s-name').value.trim();
+  var email  = document.getElementById('s-email').value.trim();
+  var pass   = document.getElementById('s-pass').value;
+  var pass2  = document.getElementById('s-pass2').value;
+  var secret = document.getElementById('s-secret').value.trim();
+
+  errEl.classList.remove('show'); errEl.textContent = '';
+  succEl.classList.remove('show'); succEl.textContent = '';
+
+  if(!name)                        { errEl.textContent = '❌ Naam zaruri hai!'; errEl.classList.add('show'); return; }
+  if(!email || !email.includes('@')){ errEl.textContent = '❌ Sahih email daalen!'; errEl.classList.add('show'); return; }
+  if(pass.length < 6)              { errEl.textContent = '❌ Password kam az kam 6 characters!'; errEl.classList.add('show'); return; }
+  if(pass !== pass2)               { errEl.textContent = '❌ Dono passwords match nahi kartay!'; errEl.classList.add('show'); return; }
+  if(secret !== ADMIN_SECRET_KEY)  { errEl.textContent = '❌ Secret key galat hai! Admin se poochein.'; errEl.classList.add('show'); return; }
+
+  btn.textContent = '⏳ Account ban raha hai...'; btn.disabled = true;
+
+  try {
+    var cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    try {
+      await db.collection('admin').doc('admins').set(
+        { emails: firebase.firestore.FieldValue.arrayUnion(email), updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+      await db.collection('admin_profiles').doc(cred.user.uid).set({
+        name: name, email: email, uid: cred.user.uid,
+        role: 'admin',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(dbErr) { console.warn('DB save error:', dbErr); }
+
+    succEl.textContent = '✅ Admin account ban gaya! Ab login karein.';
+    succEl.classList.add('show');
+    await auth.signOut();
+    setTimeout(function() {
+      switchAuthTab('login');
+      document.getElementById('a-email').value = email;
+      btn.textContent = '🚀 Admin Account Banayein'; btn.disabled = false;
+    }, 2200);
+  } catch(err) {
+    var msgs = {
+      'auth/email-already-in-use':   '❌ Yeh email pehle se registered hai!',
+      'auth/invalid-email':          '❌ Email format sahi nahi!',
+      'auth/weak-password':          '❌ Password zyada strong banana ho! (6+ chars)',
+      'auth/network-request-failed': '❌ Internet check karein!'
+    };
+    errEl.textContent = msgs[err.code] || '❌ Error: ' + err.message;
+    errEl.classList.add('show');
+    btn.textContent = '🚀 Admin Account Banayein'; btn.disabled = false;
+  }
+}
+
+waitForFirebaseAdmin(function() {
+
+// ============================================
+// ADMIN CONFIG
+// ============================================
+let allUsers = [];
+let allWithdrawals = [];
+let currentUserDoc = null;
+let currentWdDoc = null;
+let editingTaskId = null;
+let editingSurveyId = null;
+
+// ============================================
+// CLOCK
+// ============================================
+setInterval(() => {
+  const now = new Date();
+  const el = document.getElementById('tb-clock');
+  if(el) el.textContent = now.toLocaleTimeString('en-PK');
+}, 1000);
+
+// ============================================
+// TOAST
+// ============================================
+let toastTimer;
+function toast(msg, type='info') {
+  const el = document.getElementById('toast-el');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ============================================
+// AUTH
+// ============================================
+async function adminLogin() {
+  const email = document.getElementById('a-email').value.trim();
+  const pass  = document.getElementById('a-pass').value;
+  const errEl = document.getElementById('auth-err');
+  errEl.classList.remove('show');
+  errEl.textContent = '';
+
+  if(!email || !pass) {
+    errEl.textContent = '❌ Email aur password daalen!';
+    errEl.classList.add('show');
+    return;
+  }
+
+  // Show loading
+  const btn = document.getElementById('login-btn');
+  if(btn) { btn.textContent = '⏳ Login ho raha hai...'; btn.disabled = true; }
+
+  try {
+    // Step 1: Firebase Auth se login karo
+    await auth.signInWithEmailAndPassword(email, pass);
+
+    // Step 2: Admins list check karo (optional — agar list exist kare)
+    try {
+      const admDoc = await db.collection('admin').doc('admins').get();
+      if(admDoc.exists && admDoc.data().emails && admDoc.data().emails.length > 0) {
+        const adminEmails = admDoc.data().emails;
+        if(!adminEmails.includes(email)) {
+          // Not in admin list — logout and block
+          await auth.signOut();
+          errEl.textContent = '❌ Yeh email admin list mein nahi hai! Access denied.';
+          errEl.classList.add('show');
+          if(btn) { btn.textContent = '⚡ Admin Panel Kholein'; btn.disabled = false; }
+          return;
+        }
+      }
+      // Agar admins doc exist nahi — pehli baar login, allow karo (setup mode)
+    } catch(e) {
+      // Firestore check fail — still allow login
+      console.warn('Admin check skipped:', e);
+    }
+
+    // onAuthStateChanged baaki kaam karega
+  } catch(err) {
+    const msgs = {
+      'auth/user-not-found':         '❌ Email registered nahi! Pehle user panel mein signup karein.',
+      'auth/wrong-password':         '❌ Password galat hai!',
+      'auth/invalid-credential':     '❌ Email ya password galat hai!',
+      'auth/invalid-email':          '❌ Email format sahi nahi!',
+      'auth/too-many-requests':      '❌ Bahut zyada koshishein! 5 min baad try karein.',
+      'auth/network-request-failed': '❌ Internet connection check karein!',
+      'auth/user-disabled':          '❌ Yeh account disable ho gaya hai.'
+    };
+    errEl.textContent = msgs[err.code] || '❌ Error: ' + err.message;
+    errEl.classList.add('show');
+    if(btn) { btn.textContent = '⚡ Admin Panel Kholein'; btn.disabled = false; }
+  }
+}
+
+function adminLogout() {
+  if(!confirm('Logout karna chahte hain?')) return;
+  auth.signOut();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var ap = document.getElementById('a-pass');
+  var ae = document.getElementById('a-email');
+  if(ap) ap.addEventListener('keydown', function(e) { if(e.key==='Enter') adminLogin(); });
+  if(ae) ae.addEventListener('keydown', function(e) { if(e.key==='Enter') adminLogin(); });
+  var sp = document.getElementById('s-pass2');
+  if(sp) sp.addEventListener('keydown', function(e) { if(e.key==='Enter') adminSignup(); });
+});
+
+// ============================================
+// ADMIN SESSION GUARD — CORE FIX
+// ============================================
+
+// Yeh flag track karta hai ke login button se login hua ya auto session se
+let manualLoginAttempted = false;
+
+auth.onAuthStateChanged(async user => {
+  const btn     = document.getElementById('login-btn');
+  const authScr = document.getElementById('auth-screen');
+  const adminAp = document.getElementById('admin-app');
+  const errEl   = document.getElementById('auth-err');
+  const loader  = document.getElementById('session-loader');
+
+  function showAuthScreen(errMsg) {
+    if(loader) loader.style.display = 'none';
+    // Show login form
+    const wrap = document.querySelector('.auth-wrap');
+    if(wrap) wrap.style.display = 'block';
+    authScr.style.display = 'flex';
+    adminAp.classList.remove('show');
+    if(btn) { btn.textContent = '⚡ Admin Panel Kholein'; btn.disabled = false; }
+    if(errMsg && errEl) {
+      errEl.textContent = errMsg;
+      errEl.classList.add('show');
+    }
+  }
+
+  function showAdminPanel(user) {
+    if(loader) loader.style.display = 'none';
+    authScr.style.display = 'none';
+    adminAp.classList.add('show');
+    document.getElementById('sb-uname').textContent = user.displayName || 'Admin';
+    document.getElementById('sb-uemail').textContent = user.email || '';
+    document.getElementById('sb-ava').textContent = (user.email || 'A')[0].toUpperCase();
+    document.getElementById('set-admemail').value = user.email || '';
+    if(btn) { btn.textContent = '⚡ Admin Panel Kholein'; btn.disabled = false; }
+    loadDashboard();
+    loadWithdrawals();
+    loadUsers();
+    loadTasks();
+    loadSurveys();
+    loadAnnouncements();
+    loadLogs();
+    addLog('Admin Login', user.email, 'Session started');
+  }
+
+  if(user) {
+    // Koi bhi logged-in user detect hua — pehle admin check karo
+    try {
+      const admDoc = await db.collection('admin').doc('admins').get();
+
+      if(admDoc.exists && admDoc.data().emails && admDoc.data().emails.length > 0) {
+        // Admin list maujood hai — check karo
+        if(!admDoc.data().emails.includes(user.email)) {
+          // ❌ Normal user hai — FORCE LOGOUT
+          await auth.signOut();
+          showAuthScreen('🚫 Access denied! "' + user.email + '" admin nahi hai. Admin email se login karein.');
+          return;
+        }
+        // ✅ Admin confirmed
+        showAdminPanel(user);
+
+      } else {
+        // Admins list nahi bani — PEHLI BAAR setup
+        // Is user ko admin banao aur panel kholein
+        await db.collection('admin').doc('admins').set({
+          emails: [user.email],
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        showAdminPanel(user);
+      }
+
+    } catch(e) {
+      // Firestore rules ya network error — panel kholo, logout mat karo
+      console.warn('Admin check error:', e.message);
+      showAdminPanel(user);
+    }
+
+  } else {
+    // Koi logged in nahi — login form dikhao
+    showAuthScreen();
+  }
+});
+
+
+// ============================================
+// NAVIGATION
+// ============================================
+const pageTitles = {
+  dashboard:'Dashboard', analytics:'Analytics', users:'Users',
+  withdrawals:'Withdrawals', tasks:'Quick Tasks', surveys:'Surveys',
+  announcements:'Announcements', settings:'Settings', logs:'Activity Logs'
+};
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-'+id);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+id+"'")) n.classList.add('active');
+  });
+  document.getElementById('page-title').textContent = pageTitles[id] || id;
+  if(id === 'analytics') loadAnalytics();
+  if(id === 'logs') loadLogs();
+}
+
+// ============================================
+// DASHBOARD
+// ============================================
+async function loadDashboard() {
+  try {
+    const snap = await db.collection('users').get();
+    const users = snap.docs.map(d => ({id: d.id, ...d.data()}));
+    allUsers = users;
+
+    // Stats
+    const totalUsers = users.length;
+    const bannedUsers = users.filter(u => u.banned).length;
+    let totalPaid = 0;
+    let pendingCount = 0;
+    let pendingAmt = 0;
+    let totalTxns = 0;
+
+    users.forEach(u => {
+      if(u.transactions) {
+        u.transactions.forEach(t => {
+          if(t.amt < 0) { totalPaid += Math.abs(t.amt); }
+          if(t.status === 'pending') { pendingCount++; pendingAmt += Math.abs(t.amt||0); }
+        });
+        totalTxns += u.transactions.length;
+      }
+    });
+
+    // Count withdrawal requests from dedicated collection
+    const wdSnap = await db.collection('withdrawals').get();
+    const wds = wdSnap.docs.map(d => ({id: d.id, ...d.data()}));
+    allWithdrawals = wds;
+    const pendingWds = wds.filter(w => w.status === 'pending');
+
+    document.getElementById('st-users').textContent = totalUsers;
+    document.getElementById('st-users-sub').textContent = bannedUsers + ' banned · ' + (totalUsers - bannedUsers) + ' active';
+    document.getElementById('st-paid').textContent = '$' + totalPaid.toFixed(2);
+    document.getElementById('st-paid-sub').textContent = totalTxns + ' total transactions';
+    document.getElementById('st-pending').textContent = pendingWds.length;
+    document.getElementById('st-pending-sub').textContent = 'Review karo!';
+    document.getElementById('st-banned').textContent = bannedUsers;
+    document.getElementById('wd-pending-count').textContent = pendingWds.length;
+
+    // Recent withdrawals
+    const wdEl = document.getElementById('dash-wd-list');
+    if(wds.length === 0) { wdEl.innerHTML = '<div style="color:var(--txt3);font-size:12px;padding:10px 0;">Koi withdrawal request nahi abhi</div>'; }
+    else {
+      wdEl.innerHTML = wds.slice(-5).reverse().map(w =>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div><div style="font-size:13px;font-weight:600;color:var(--txt);">${w.userName||'User'}</div><div style="font-size:11px;color:var(--txt3);">${w.method||''} · ${w.date||''}</div></div>
+          <div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;">$${(w.amount||0).toFixed(2)}</div>
+          <span class="badge badge-${w.status==='approved'?'green':w.status==='rejected'?'red':'yellow'}">${w.status||'pending'}</span></div>
+        </div>`
+      ).join('');
+    }
+
+    // Recent users
+    const usrEl = document.getElementById('dash-users-list');
+    const recentUsers = users.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)).slice(0,8);
+    usrEl.innerHTML = recentUsers.map(u =>
+      `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;">${u.avatar||'👤'}</div>
+        <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--txt);">${u.name||'User'}</div><div style="font-size:11px;color:var(--txt3);">${u.email||''}</div></div>
+        <div style="font-size:13px;font-weight:700;color:var(--green);font-family:'JetBrains Mono',monospace;">$${(u.balance||0).toFixed(2)}</div>
+      </div>`
+    ).join('');
+
+    renderDashChart(users);
+  } catch(e) {
+    toast('Dashboard load error: ' + e.message, 'error');
+  }
+}
+
+function renderDashChart(users) {
+  const days = [];
+  for(let i=6;i>=0;i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    days.push({ key: d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(), lbl: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()] });
+  }
+  const totals = {};
+  days.forEach(d => totals[d.key] = 0);
+  users.forEach(u => {
+    if(!u.transactions) return;
+    u.transactions.forEach(t => {
+      if(t.amt > 0) {
+        const k = t.dateKey;
+        if(k && totals[k] !== undefined) totals[k] += t.amt;
+      }
+    });
+  });
+  const vals = days.map(d => totals[d.key]||0);
+  const maxV = Math.max(...vals, 0.01);
+  const chartEl = document.getElementById('dash-chart');
+  const lblEl   = document.getElementById('dash-chart-lbls');
+  if(!chartEl) return;
+  chartEl.innerHTML = '';
+  lblEl.innerHTML = '';
+  days.forEach((d,i) => {
+    const pct = Math.max((vals[i]/maxV)*100, vals[i]>0?6:2);
+    const bar = document.createElement('div');
+    bar.style.cssText = `flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--acc),var(--acc2));height:${pct}%;min-height:2px;transition:height .8s;title:$${vals[i].toFixed(2)}`;
+    chartEl.appendChild(bar);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'flex:1;text-align:center;font-size:10px;color:var(--txt3);font-family:JetBrains Mono,monospace;';
+    lbl.textContent = d.lbl;
+    lblEl.appendChild(lbl);
+  });
+  chartEl.style.cssText = 'display:flex;align-items:flex-end;gap:6px;height:80px;margin-top:12px;';
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+async function loadAnalytics() {
+  const snap = await db.collection('users').get();
+  const users = snap.docs.map(d => ({id:d.id,...d.data()}));
+  let totalTasks=0, totalSurveys=0, totalStreak=0, totalPoints=0;
+  users.forEach(u => {
+    totalTasks += (u.tasksDone||0);
+    totalSurveys += (u.completedSurveys||[]).length;
+    totalStreak += (u.streak||1);
+    totalPoints += (u.points||0);
+  });
+  document.getElementById('an-tasks').textContent = totalTasks;
+  document.getElementById('an-surveys').textContent = totalSurveys;
+  document.getElementById('an-streak').textContent = users.length ? (totalStreak/users.length).toFixed(1) : 0;
+  document.getElementById('an-points').textContent = totalPoints.toLocaleString();
+
+  const sorted = users.sort((a,b) => (b.totalEarned||0)-(a.totalEarned||0)).slice(0,20);
+  const tbody = document.getElementById('analytics-table');
+  if(sorted.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">Koi user nahi</td></tr>'; return; }
+  const medals = ['🥇','🥈','🥉'];
+  tbody.innerHTML = sorted.map((u,i) =>
+    `<tr>
+      <td><b>${medals[i]||i+1}</b></td>
+      <td><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">${u.avatar||'👤'}</span><b>${u.name||'User'}</b></div></td>
+      <td style="color:var(--txt2);font-size:12px;">${u.email||''}</td>
+      <td><span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700;">$${(u.totalEarned||0).toFixed(2)}</span></td>
+      <td>${u.tasksDone||0}</td>
+      <td>${u.streak||1}🔥</td>
+      <td><button class="action-btn" onclick="openUserModal('${u.id}')">👁 View</button></td>
+    </tr>`
+  ).join('');
+}
+
+// ============================================
+// USERS
+// ============================================
+async function loadUsers() {
+  try {
+    const snap = await db.collection('users').get();
+    allUsers = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderUsersTable(allUsers);
+  } catch(e) { toast('Users load error', 'error'); }
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const f = document.getElementById('user-filter').value;
+  let filtered = allUsers;
+  if(q) filtered = filtered.filter(u => (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || u.id.includes(q));
+  if(f === 'active') filtered = filtered.filter(u => !u.banned);
+  if(f === 'banned') filtered = filtered.filter(u => u.banned);
+  if(f === 'rich')   filtered = filtered.filter(u => (u.balance||0) >= 1);
+  renderUsersTable(filtered);
+}
+
+function renderUsersTable(users) {
+  const tbody = document.getElementById('users-table');
+  if(users.length === 0) { tbody.innerHTML = '<tr><td colspan="8" class="tbl-empty">Koi user nahi mila</td></tr>'; return; }
+  tbody.innerHTML = users.map(u =>
+    `<tr>
+      <td><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">${u.avatar||'👤'}</span><b>${u.name||'User'}</b></div></td>
+      <td style="color:var(--txt2);font-size:12px;">${u.email||''}</td>
+      <td><span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700;">$${(u.balance||0).toFixed(2)}</span></td>
+      <td style="color:var(--acc);font-family:'JetBrains Mono',monospace;">$${(u.totalEarned||0).toFixed(2)}</td>
+      <td>${u.tasksDone||0}</td>
+      <td style="font-size:11px;color:var(--txt3);">${u.createdAt ? new Date(u.createdAt.seconds*1000).toLocaleDateString() : 'N/A'}</td>
+      <td><span class="badge ${u.banned?'badge-red':'badge-green'}">${u.banned?'🚫 Banned':'✅ Active'}</span></td>
+      <td>
+        <button class="action-btn" onclick="openUserModal('${u.id}')">👁 View</button>
+        <button class="action-btn success" onclick="quickAddBal('${u.id}','${u.name||'User'}')">💰</button>
+        <button class="action-btn danger" onclick="quickBan('${u.id}',${u.banned||false})">${u.banned?'✅ Unban':'🚫 Ban'}</button>
+      </td>
+    </tr>`
+  ).join('');
+}
+
+function openUserModal(uid) {
+  const u = allUsers.find(x => x.id === uid);
+  if(!u) return;
+  currentUserDoc = u;
+  document.getElementById('mu-title').textContent = (u.avatar||'👤') + ' ' + (u.name||'User');
+  document.getElementById('mu-ban-btn').textContent = u.banned ? '✅ Unban' : '🚫 Ban';
+  const body = document.getElementById('modal-user-body');
+  body.innerHTML = `
+    <div class="user-detail-grid">
+      <div class="ud-item"><div class="ud-lbl">UID</div><div class="ud-val mono" style="font-size:11px;">${u.id}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Email</div><div class="ud-val">${u.email||'N/A'}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Balance</div><div class="ud-val mono" style="color:var(--green);">$${(u.balance||0).toFixed(2)}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Total Earned</div><div class="ud-val mono" style="color:var(--acc);">$${(u.totalEarned||0).toFixed(2)}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Tasks Done</div><div class="ud-val">${u.tasksDone||0}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Streak</div><div class="ud-val">${u.streak||1}🔥</div></div>
+      <div class="ud-item"><div class="ud-lbl">Points</div><div class="ud-val">${u.points||0}⭐</div></div>
+      <div class="ud-item"><div class="ud-lbl">Referrals</div><div class="ud-val">${u.referrals||0}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Ref Code</div><div class="ud-val mono" style="color:var(--yellow);">${u.refCode||'N/A'}</div></div>
+      <div class="ud-item"><div class="ud-lbl">Status</div><div class="ud-val"><span class="badge ${u.banned?'badge-red':'badge-green'}">${u.banned?'Banned':'Active'}</span></div></div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:600;color:var(--txt2);margin-bottom:8px;">📊 Recent Transactions (last 5)</div>
+      ${(u.transactions||[]).slice(-5).reverse().map(t =>
+        `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
+          <span>${t.ico||''} ${t.title||''}</span>
+          <span style="color:${t.amt>0?'var(--green)':'var(--red)'};font-family:'JetBrains Mono',monospace;">${t.amt>0?'+':''}$${Math.abs(t.amt||0).toFixed(2)}</span>
+        </div>`
+      ).join('') || '<div style="color:var(--txt3);font-size:12px;">Koi transaction nahi</div>'}
+    </div>`;
+  openModal('modal-user');
+}
+
+function quickAddBal(uid, name) {
+  currentUserDoc = allUsers.find(x => x.id === uid) || {id: uid, name};
+  addBalanceModal();
+}
+
+function addBalanceModal() {
+  if(!currentUserDoc) return;
+  document.getElementById('ab-user').value = currentUserDoc.name + ' (' + (currentUserDoc.email||currentUserDoc.id) + ')';
+  document.getElementById('ab-amount').value = '';
+  document.getElementById('ab-reason').value = '';
+  openModal('modal-add-bal');
+}
+
+async function applyBalanceChange() {
+  const amt = parseFloat(document.getElementById('ab-amount').value);
+  const reason = document.getElementById('ab-reason').value.trim();
+  if(isNaN(amt)) { toast('Amount sahi daalo!', 'error'); return; }
+  if(!reason) { toast('Reason likhna zaruri hai!', 'error'); return; }
+  const uid = currentUserDoc.id;
+  try {
+    const userRef = db.collection('users').doc(uid);
+    const doc = await userRef.get();
+    const data = doc.data();
+    const newBal = (data.balance||0) + amt;
+    const newTotal = amt > 0 ? (data.totalEarned||0) + amt : (data.totalEarned||0);
+    const txns = data.transactions || [];
+    txns.push({ ico:'🔧', title:'Admin: ' + reason, date: getTime(), amt: amt, dateKey: todayKey() });
+    await userRef.update({ balance: parseFloat(newBal.toFixed(2)), totalEarned: parseFloat(newTotal.toFixed(2)), transactions: txns });
+    closeModal('modal-add-bal');
+    closeModal('modal-user');
+    toast((amt>0?'✅ +':'✅ ') + '$'+Math.abs(amt).toFixed(2) + ' balance update hua!', 'success');
+    addLog('Balance Changed', currentUserDoc.email||uid, (amt>0?'+':'')+'$'+amt.toFixed(2)+' · '+reason);
+    loadUsers(); loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function toggleBanUser() {
+  if(!currentUserDoc) return;
+  const isBanned = !currentUserDoc.banned;
+  const action = isBanned ? 'ban' : 'unban';
+  if(!confirm(`User ko ${action} karna chahte hain? User: ${currentUserDoc.name}`)) return;
+  try {
+    await db.collection('users').doc(currentUserDoc.id).update({ banned: isBanned });
+    toast((isBanned?'🚫 User ban':'✅ User unban') + ' ho gaya!', isBanned?'error':'success');
+    addLog(isBanned?'User Banned':'User Unbanned', currentUserDoc.email||currentUserDoc.id, '');
+    closeModal('modal-user');
+    loadUsers(); loadDashboard();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function quickBan(uid, isBanned) {
+  const u = allUsers.find(x => x.id === uid);
+  const newBan = !isBanned;
+  if(!confirm((newBan?'Ban':'Unban')+' karein: '+(u?u.name:uid)+'?')) return;
+  try {
+    await db.collection('users').doc(uid).update({ banned: newBan });
+    toast((newBan?'🚫 Banned':'✅ Unbanned')+'!', newBan?'error':'success');
+    addLog(newBan?'User Banned':'User Unbanned', u?u.email:uid, '');
+    loadUsers();
+  } catch(e) { toast('Error: '+e.message, 'error'); }
+}
+
+// ============================================
+// WITHDRAWALS
+// ============================================
+async function loadWithdrawals() {
+  try {
+    const snap = await db.collection('withdrawals').orderBy('timestamp','desc').get();
+    allWithdrawals = snap.docs.map(d => ({id:d.id,...d.data()}));
+    renderWithdrawalsTable(allWithdrawals);
+    const pendingCount = allWithdrawals.filter(w => w.status==='pending').length;
+    document.getElementById('wd-pending-count').textContent = pendingCount;
+  } catch(e) {
+    // If no 'withdrawals' collection or index issue, try alternate
+    try {
+      const snap = await db.collection('withdrawals').get();
+      allWithdrawals = snap.docs.map(d => ({id:d.id,...d.data()}));
+      renderWithdrawalsTable(allWithdrawals);
+    } catch(e2) { toast('Withdrawals load error', 'error'); }
+  }
+}
+
+function filterWithdrawals() {
+  const f = document.getElementById('wd-filter').value;
+  const filtered = f === 'all' ? allWithdrawals : allWithdrawals.filter(w => w.status === f);
+  renderWithdrawalsTable(filtered);
+}
+
+function renderWithdrawalsTable(wds) {
+  const tbody = document.getElementById('wd-table');
+  if(wds.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="tbl-empty">Koi withdrawal request nahi</td></tr>'; return; }
+  tbody.innerHTML = wds.map(w =>
+    `<tr>
+      <td><b>${w.userName||'User'}</b><div style="font-size:11px;color:var(--txt3);">${w.userEmail||''}</div></td>
+      <td>${w.method||''}</td>
+      <td><span style="color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700;">$${(w.amount||0).toFixed(2)}</span></td>
+      <td style="font-size:12px;color:var(--txt2);">${w.account||'N/A'}</td>
+      <td style="font-size:11px;color:var(--txt3);">${w.date||''}</td>
+      <td><span class="badge ${w.status==='approved'?'badge-green':w.status==='rejected'?'badge-red':'badge-yellow'}">${w.status||'pending'}</span></td>
+      <td>
+        ${w.status==='pending'
+          ? `<button class="action-btn success" onclick="openWdModal('${w.id}')">✅ Review</button>`
+          : `<button class="action-btn" onclick="openWdModal('${w.id}')">👁 View</button>`}
+      </td>
+    </tr>`
+  ).join('');
+}
+
+function openWdModal(wid) {
+  const w = allWithdrawals.find(x => x.id === wid);
+  if(!w) return;
+  currentWdDoc = w;
+  const body = document.getElementById('modal-wd-body');
+  body.innerHTML = `
+    <div class="wd-detail">
+      <div class="wd-row"><span class="wd-key">User</span><span class="wd-val">${w.userName||'N/A'}</span></div>
+      <div class="wd-row"><span class="wd-key">Email</span><span class="wd-val">${w.userEmail||'N/A'}</span></div>
+      <div class="wd-row"><span class="wd-key">Method</span><span class="wd-val">${w.method||'N/A'}</span></div>
+      <div class="wd-row"><span class="wd-key">Account</span><span class="wd-val" style="color:var(--acc);">${w.account||'N/A'}</span></div>
+      <div class="wd-row"><span class="wd-key">Amount</span><span class="wd-val" style="color:var(--green);font-family:'JetBrains Mono',monospace;font-size:18px;">$${(w.amount||0).toFixed(2)}</span></div>
+      <div class="wd-row"><span class="wd-key">Date</span><span class="wd-val">${w.date||'N/A'}</span></div>
+      <div class="wd-row"><span class="wd-key">Status</span><span class="wd-val"><span class="badge badge-${w.status==='approved'?'green':w.status==='rejected'?'red':'yellow'}">${w.status||'pending'}</span></span></div>
+      ${w.adminNote ? `<div class="wd-row"><span class="wd-key">Admin Note</span><span class="wd-val">${w.adminNote}</span></div>` : ''}
+    </div>`;
+  document.getElementById('wd-approve-btn').style.display = w.status==='pending' ? '' : 'none';
+  document.getElementById('wd-reject-btn').style.display = w.status==='pending' ? '' : 'none';
+  document.getElementById('wd-note').value = '';
+  openModal('modal-wd');
+}
+
+async function processWithdrawal(status) {
+  if(!currentWdDoc) return;
+  const note = document.getElementById('wd-note').value.trim();
+  const confirmMsg = status==='approved' ? `$${currentWdDoc.amount} approve karna chahte hain?` : `Reject karna chahte hain?`;
+  if(!confirm(confirmMsg)) return;
+  try {
+    await db.collection('withdrawals').doc(currentWdDoc.id).update({ status, adminNote: note, processedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    // Also notify user by updating their transaction record
+    if(currentWdDoc.userId) {
+      const userRef = db.collection('users').doc(currentWdDoc.userId);
+      const userDoc = await userRef.get();
+      if(userDoc.exists) {
+        const txns = userDoc.data().transactions || [];
+        const updated = txns.map(t => {
+          if(t.wdId === currentWdDoc.id) return {...t, status};
+          return t;
+        });
+        await userRef.update({ transactions: updated });
+      }
+    }
+    closeModal('modal-wd');
+    toast((status==='approved'?'✅ Withdrawal approve':'❌ Withdrawal reject') + ' ho gaya!', status==='approved'?'success':'error');
+    addLog('Withdrawal '+status, currentWdDoc.userEmail||'', '$'+currentWdDoc.amount);
+    loadWithdrawals();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ============================================
+// TASKS MANAGEMENT
+// ============================================
+const DEFAULT_TASKS = [
+  {id:'t1',ico:'📋',name:'Mini Survey',reward:0.01,time:'2 min',badge:'HOT',status:'active'},
+  {id:'t2',ico:'🎥',name:'Video Dekho',reward:0.01,time:'30 sec',badge:null,status:'active'},
+  {id:'t3',ico:'📱',name:'App Install',reward:0.02,time:'1 min',badge:'💎',status:'active'},
+  {id:'t4',ico:'🔍',name:'Search Task',reward:0.01,time:'1 min',badge:null,status:'active'},
+  {id:'t5',ico:'🎮',name:'Mini Game',reward:0.01,time:'3 min',badge:null,status:'active'},
+  {id:'t6',ico:'📝',name:'Long Survey',reward:0.01,time:'10 min',badge:'⭐',status:'active'},
+  {id:'t7',ico:'🤳',name:'Social Share',reward:0.01,time:'1 min',badge:null,status:'active'},
+  {id:'t8',ico:'📰',name:'Article Read',reward:0.01,time:'2 min',badge:null,status:'active'},
+  {id:'t9',ico:'🧠',name:'GK Quiz',reward:0.02,time:'2 min',badge:'NEW',status:'active'},
+  {id:'t10',ico:'📊',name:'Quick Poll',reward:0.01,time:'30 sec',badge:null,status:'active'}
+];
+let tasksData = [...DEFAULT_TASKS];
+
+async function loadTasks() {
+  try {
+    const doc = await db.collection('admin').doc('tasks_config').get();
+    if(doc.exists && doc.data().tasks) tasksData = doc.data().tasks;
+    else tasksData = [...DEFAULT_TASKS];
+  } catch(e) { tasksData = [...DEFAULT_TASKS]; }
+  renderTasksGrid();
+}
+
+function renderTasksGrid() {
+  const grid = document.getElementById('tasks-grid');
+  if(!grid) return;
+  grid.innerHTML = tasksData.map(t =>
+    `<div class="task-card ${t.status==='disabled'?'disabled':''}">
+      <div class="tc-head">
+        <span class="tc-ico">${t.ico}</span>
+        <label class="tc-toggle"><input type="checkbox" ${t.status!=='disabled'?'checked':''} onchange="toggleTask('${t.id}',this.checked)"><div class="tc-slider"></div></label>
+      </div>
+      <div class="tc-name">${t.name}</div>
+      <div class="tc-reward">+$${t.reward.toFixed(2)}</div>
+      <div class="tc-meta">⏱ ${t.time}${t.badge?' · '+t.badge:''}</div>
+      <div class="tc-actions">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="openEditTaskModal('${t.id}')" title="Edit">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteTask('${t.id}')" title="Delete">🗑️</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+async function toggleTask(id, enabled) {
+  tasksData = tasksData.map(t => t.id===id ? {...t, status: enabled?'active':'disabled'} : t);
+  await saveTasks();
+  toast((enabled?'✅ Task enabled':'❌ Task disabled')+'!', enabled?'success':'info');
+}
+
+async function saveTasks() {
+  await db.collection('admin').doc('tasks_config').set({ tasks: tasksData, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  renderTasksGrid();
+  addLog('Tasks Updated', auth.currentUser?.email||'admin', tasksData.length + ' tasks');
+}
+
+function openAddTaskModal() {
+  editingTaskId = null;
+  document.getElementById('addtask-title').textContent = '➕ Naya Task';
+  ['at-id','at-ico','at-name','at-badge'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('at-reward').value = '0.01';
+  document.getElementById('at-time').value = '';
+  document.getElementById('at-status').value = 'active';
+  document.getElementById('at-id').readOnly = false;
+  openModal('modal-add-task');
+}
+
+function openEditTaskModal(id) {
+  editingTaskId = id;
+  const t = tasksData.find(x => x.id === id);
+  if(!t) return;
+  document.getElementById('addtask-title').textContent = '✏️ Task Edit';
+  document.getElementById('at-id').value = t.id; document.getElementById('at-id').readOnly = true;
+  document.getElementById('at-ico').value = t.ico;
+  document.getElementById('at-name').value = t.name;
+  document.getElementById('at-reward').value = t.reward;
+  document.getElementById('at-time').value = t.time;
+  document.getElementById('at-badge').value = t.badge||'';
+  document.getElementById('at-status').value = t.status||'active';
+  openModal('modal-add-task');
+}
+
+async function saveTask() {
+  const id = document.getElementById('at-id').value.trim();
+  const ico = document.getElementById('at-ico').value.trim();
+  const name = document.getElementById('at-name').value.trim();
+  const reward = parseFloat(document.getElementById('at-reward').value);
+  const time = document.getElementById('at-time').value.trim();
+  const badge = document.getElementById('at-badge').value.trim() || null;
+  const status = document.getElementById('at-status').value;
+  if(!id||!ico||!name||isNaN(reward)||!time) { toast('Sab fields bhari honi chahiye!', 'error'); return; }
+  if(editingTaskId) {
+    tasksData = tasksData.map(t => t.id===editingTaskId ? {id,ico,name,reward,time,badge,status} : t);
+  } else {
+    if(tasksData.find(t => t.id===id)) { toast('Yeh ID pehle se exist karta hai!', 'error'); return; }
+    tasksData.push({id,ico,name,reward,time,badge,status});
+  }
+  await saveTasks();
+  closeModal('modal-add-task');
+  toast('✅ Task save ho gaya!', 'success');
+}
+
+async function deleteTask(id) {
+  if(!confirm('Task delete karna chahte hain? Yeh wapas nahi aaega!')) return;
+  tasksData = tasksData.filter(t => t.id !== id);
+  await saveTasks();
+  toast('🗑️ Task delete ho gaya!', 'info');
+}
+
+// ============================================
+// SURVEYS MANAGEMENT
+// ============================================
+let surveysData = [];
+
+async function loadSurveys() {
+  try {
+    const doc = await db.collection('admin').doc('surveys_config').get();
+    if(doc.exists && doc.data().surveys) surveysData = doc.data().surveys;
+    else surveysData = [];
+  } catch(e) { surveysData = []; }
+  renderSurveysList();
+}
+
+function renderSurveysList() {
+  const list = document.getElementById('surveys-list');
+  if(!list) return;
+  if(surveysData.length === 0) {
+    list.innerHTML = '<div style="color:var(--txt3);text-align:center;padding:40px;font-size:13px;">Koi survey nahi — Naya survey add karein!</div>';
+    return;
+  }
+  list.innerHTML = surveysData.map(s =>
+    `<div class="survey-item">
+      <div class="si-ico" style="background:${s.bg||'rgba(0,212,255,.1)'};">${s.ico}</div>
+      <div class="si-info">
+        <div class="si-name">${s.name} <span class="badge badge-${s.type==='long'?'purple':'blue'}">${s.type==='long'?'LONG':'QUICK'}</span></div>
+        <div class="si-meta">⏱ ${s.time} · ${s.qs||0} sawalaat · +${s.pts||0} pts</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-right:12px;">
+        <div class="si-reward">$${(s.reward||0).toFixed(2)}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="openEditSurveyModal('${s.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSurvey('${s.id}')">🗑️</button>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function openAddSurveyModal() {
+  editingSurveyId = null;
+  document.getElementById('addsurv-title').textContent = '📋 Naya Survey';
+  ['as-id','as-ico','as-name','as-time','as-bg'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('as-reward').value = '0.05';
+  document.getElementById('as-pts').value = '50';
+  document.getElementById('as-type').value = 'quick';
+  document.getElementById('as-qs').value = '';
+  document.getElementById('as-id').readOnly = false;
+  openModal('modal-add-survey');
+}
+
+function openEditSurveyModal(id) {
+  editingSurveyId = id;
+  const s = surveysData.find(x => x.id === id);
+  if(!s) return;
+  document.getElementById('addsurv-title').textContent = '✏️ Survey Edit';
+  document.getElementById('as-id').value = s.id; document.getElementById('as-id').readOnly = true;
+  document.getElementById('as-ico').value = s.ico;
+  document.getElementById('as-name').value = s.name;
+  document.getElementById('as-reward').value = s.reward;
+  document.getElementById('as-pts').value = s.pts||50;
+  document.getElementById('as-time').value = s.time;
+  document.getElementById('as-type').value = s.type||'quick';
+  document.getElementById('as-bg').value = s.bg||'';
+  document.getElementById('as-qs').value = JSON.stringify(s.questions||[], null, 2);
+  openModal('modal-add-survey');
+}
+
+async function saveSurvey() {
+  const id     = document.getElementById('as-id').value.trim();
+  const ico    = document.getElementById('as-ico').value.trim();
+  const name   = document.getElementById('as-name').value.trim();
+  const reward = parseFloat(document.getElementById('as-reward').value);
+  const pts    = parseInt(document.getElementById('as-pts').value)||50;
+  const time   = document.getElementById('as-time').value.trim();
+  const type   = document.getElementById('as-type').value;
+  const bg     = document.getElementById('as-bg').value.trim()||'rgba(0,212,255,.1)';
+  const qsRaw  = document.getElementById('as-qs').value.trim();
+  if(!id||!ico||!name||isNaN(reward)||!time) { toast('Sab fields bhari honi chahiye!', 'error'); return; }
+  let questions = [];
+  if(qsRaw) {
+    try { questions = JSON.parse(qsRaw); } catch(e) { toast('Questions ka JSON format galat hai! Sahi karein.', 'error'); return; }
+  }
+  const survObj = {id,ico,name,reward,pts,time,type,bg,questions,qs:questions.length};
+  if(editingSurveyId) {
+    surveysData = surveysData.map(s => s.id===editingSurveyId ? survObj : s);
+  } else {
+    if(surveysData.find(s => s.id===id)) { toast('Yeh survey ID pehle se exist karta hai!', 'error'); return; }
+    surveysData.push(survObj);
+  }
+  await db.collection('admin').doc('surveys_config').set({ surveys: surveysData, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  renderSurveysList();
+  closeModal('modal-add-survey');
+  toast('✅ Survey save ho gaya!', 'success');
+  addLog('Survey Saved', auth.currentUser?.email||'admin', name);
+}
+
+async function deleteSurvey(id) {
+  if(!confirm('Survey delete karna chahte hain?')) return;
+  surveysData = surveysData.filter(s => s.id !== id);
+  await db.collection('admin').doc('surveys_config').set({ surveys: surveysData, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  renderSurveysList();
+  toast('🗑️ Survey delete ho gaya!', 'info');
+}
+
+// ============================================
+// ANNOUNCEMENTS
+// ============================================
+async function loadAnnouncements() {
+  try {
+    const snap = await db.collection('announcements').orderBy('timestamp','desc').limit(10).get();
+    const items = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const el = document.getElementById('ann-list');
+    if(items.length === 0) { el.innerHTML = '<div style="color:var(--txt3);font-size:12px;">Koi announcement nahi</div>'; return; }
+    const icons = {info:'ℹ️',success:'✅',warning:'⚠️',maintenance:'🔧'};
+    el.innerHTML = items.map(a =>
+      `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:18px;">${icons[a.type]||'📢'}</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--txt);">${a.title}</div>
+          <div style="font-size:12px;color:var(--txt2);margin-top:3px;">${a.msg}</div>
+          <div style="font-size:10px;color:var(--txt3);margin-top:5px;">${a.date||''}</div>
+        </div>
+        <button class="action-btn danger" onclick="deleteAnnouncement('${a.id}')">🗑️</button>
+      </div>`
+    ).join('');
+  } catch(e) {}
+}
+
+async function postAnnouncement() {
+  const title = document.getElementById('ann-title').value.trim();
+  const msg   = document.getElementById('ann-msg').value.trim();
+  const type  = document.getElementById('ann-type').value;
+  if(!title||!msg) { toast('Title aur message dono likhein!', 'error'); return; }
+  await db.collection('announcements').add({ title, msg, type, date: getTime(), timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+  document.getElementById('ann-title').value = '';
+  document.getElementById('ann-msg').value = '';
+  toast('📢 Announcement post ho gaya!', 'success');
+  addLog('Announcement Posted', auth.currentUser?.email||'admin', title);
+  loadAnnouncements();
+}
+
+async function deleteAnnouncement(id) {
+  if(!confirm('Announcement delete karein?')) return;
+  await db.collection('announcements').doc(id).delete();
+  loadAnnouncements();
+  toast('🗑️ Deleted!', 'info');
+}
+
+// ============================================
+// SETTINGS
+// ============================================
+function switchSettingsTab(tab) {
+  ['general','cashout','rewards','admin'].forEach(t => {
+    document.getElementById('settings-'+t).style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('.stab').forEach((b,i) => {
+    b.classList.toggle('active', ['general','cashout','rewards','admin'][i] === tab);
+  });
+  if(tab === 'admin') loadAdminEmailsList();
+}
+
+async function loadAdminEmailsList() {
+  try {
+    const doc = await db.collection('admin').doc('admins').get();
+    if(doc.exists && doc.data().emails) {
+      document.getElementById('set-adminemails').value = doc.data().emails.join('\n');
+    }
+  } catch(e) {}
+}
+
+async function saveSettings(section) {
+  const data = {};
+  if(section==='general') {
+    data.appName = document.getElementById('set-appname').value;
+    data.supportEmail = document.getElementById('set-email').value;
+    data.version = document.getElementById('set-version').value;
+    data.maintenance = document.getElementById('set-maintenance').value;
+  } else if(section==='cashout') {
+    data.minCashout = parseFloat(document.getElementById('set-minco').value)||0.5;
+    data.processingTime = document.getElementById('set-proctime').value;
+    data.easypaisa = document.getElementById('set-ep').value;
+    data.jazzcash = document.getElementById('set-jc').value;
+  } else if(section==='rewards') {
+    data.referralBonus = parseFloat(document.getElementById('set-ref').value)||0.05;
+    data.spinMax = parseFloat(document.getElementById('set-spinmax').value)||0.10;
+    data.adReward = parseFloat(document.getElementById('set-ad').value)||0.01;
+    data.adMaxPerDay = parseInt(document.getElementById('set-admax').value)||5;
+  }
+  await db.collection('admin').doc('app_settings').set({ [section]: data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  toast('✅ Settings save ho gayi!', 'success');
+  addLog('Settings Updated', auth.currentUser?.email||'admin', section);
+}
+
+async function saveAdminEmails() {
+  const raw = document.getElementById('set-adminemails').value.trim();
+  const emails = raw.split('\n').map(e => e.trim()).filter(e => e.includes('@'));
+  if(emails.length === 0) { toast('❌ Kam az kam ek email daalen!', 'error'); return; }
+  await db.collection('admin').doc('admins').set({ emails, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  toast('✅ Admin email list save ho gayi! (' + emails.length + ' admins)', 'success');
+  addLog('Admin Emails Updated', auth.currentUser?.email||'admin', emails.join(', '));
+}
+
+async function sendPasswordReset() {
+  const user = auth.currentUser;
+  if(!user) return;
+  await auth.sendPasswordResetEmail(user.email);
+  toast('📧 Password reset email bhej diya: ' + user.email, 'info');
+}
+
+// ============================================
+// ACTIVITY LOGS
+// ============================================
+async function addLog(action, user, details) {
+  try {
+    await db.collection('admin_logs').add({ action, user, details, time: getTime(), timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+  } catch(e) {}
+}
+
+async function loadLogs() {
+  try {
+    const snap = await db.collection('admin_logs').orderBy('timestamp','desc').limit(50).get();
+    const logs = snap.docs.map(d => ({id:d.id,...d.data()}));
+    const tbody = document.getElementById('logs-table');
+    if(logs.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">Koi log nahi</td></tr>'; return; }
+    tbody.innerHTML = logs.map(l =>
+      `<tr>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--txt2);">${l.time||''}</td>
+        <td><span class="badge badge-blue">${l.action||''}</span></td>
+        <td style="font-size:12px;">${l.user||''}</td>
+        <td style="font-size:12px;color:var(--txt2);">${l.details||''}</td>
+      </tr>`
+    ).join('');
+  } catch(e) {}
+}
+
+async function clearLogs() {
+  if(!confirm('Sab logs delete karna chahte hain?')) return;
+  const snap = await db.collection('admin_logs').limit(100).get();
+  const batch = db.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+  loadLogs();
+  toast('🗑️ Logs clear ho gayi!', 'info');
+}
+
+// ============================================
+// MODALS
+// ============================================
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+});
+
+// ============================================
+// UTILS
+// ============================================
+function getTime() {
+  const d = new Date();
+  return d.getDate()+'/'+(d.getMonth()+1)+' '+d.getHours()+':'+('0'+d.getMinutes()).slice(-2);
+}
+function todayKey() {
+  const d = new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+
+// Keyboard shortcut: Escape closes modals
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+});
+
+}); // end waitForFirebaseAdmin
+
+</script>
+</body>
+</html>
